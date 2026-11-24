@@ -1,15 +1,14 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>POC Doget — OAuth Callback</title>
+  <title>CalendierD</title>
 </head>
 <body>
-  <h2>POC Doget — OAuth Callback</h2>
-  <p id="status">Processing Google OAuth response...</p>
+  <h2>CalendierD</h2>
+  <p id="status">Connecting to CalendierD...</p>
 
   <script>
     (function () {
@@ -27,6 +26,11 @@
       const state = params.get('state');
       const error = params.get('error');
 
+      const isCallback =
+        params.has('code') ||
+        params.has('state') ||
+        params.has('error');
+
       // Remove sensitive parameters from the visible URL.
       window.history.replaceState(
         null,
@@ -34,12 +38,21 @@
         window.location.pathname
       );
 
-      if (!state || (!code && !error)) {
-        status.textContent =
-          'Callback ready. No OAuth response received.';
+      // 1. Direct access to CalendierD.
+      if (!isCallback) {
+        status.textContent = 'Opening CalendierD...';
+        window.location.replace(APPS_SCRIPT_URL);
         return;
       }
 
+      // 2. Validate OAuth callback parameters.
+      if (!state || Boolean(code) === Boolean(error)) {
+        status.textContent =
+          'Invalid OAuth response. Please sign in again.';
+        return;
+      }
+
+      // 3. Forward OAuth callback to Apps Script.
       const forward = new URL(APPS_SCRIPT_URL);
 
       if (code) {
@@ -52,10 +65,12 @@
 
       forward.searchParams.set('state', state);
 
-      status.textContent = 'Forwarding to Apps Script...';
+      status.textContent = 'Completing Google sign-in...';
 
-      // No authuser parameter is forwarded.
+      // Forward only code, state and error.
+      // Never forward authuser.
       window.location.replace(forward.toString());
+
     })();
   </script>
 </body>
